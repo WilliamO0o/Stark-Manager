@@ -35,6 +35,20 @@ func classify(system, name string) string {
 		return "metadata"
 	}
 	if isSNES(system) {
+		switch {
+		case base == "gamelist.xml.old":
+			return "metadata_backups"
+		case ext == ".cht":
+			return "cheats"
+		case ext == ".spc":
+			return "audio"
+		case ext == ".zmv" || (len(ext) == 4 && strings.HasPrefix(ext, ".zm") && ext[3] >= '1' && ext[3] <= '9'):
+			return "replays"
+		case ext == ".s00" || ext == ".s01" || ext == ".zss":
+			return "possible_states"
+		case ext == ".rar":
+			return "uninspected_packages"
+		}
 		if snesROMExtension(ext) {
 			return "games"
 		}
@@ -87,6 +101,8 @@ func (item *group) finish() {
 	sort.Strings(item.result.Paths)
 	sort.Strings(item.result.EmptyFolders)
 	sort.Strings(item.result.FoldersWithoutGames)
+	sort.Strings(item.result.UnknownFiles)
+	sort.Strings(item.result.UninspectedPackages)
 	games := item.result.Games
 	sort.Slice(games, func(i, j int) bool { return games[i].Path < games[j].Path })
 	sort.Slice(item.related, func(i, j int) bool { return item.related[i].Path < item.related[j].Path })

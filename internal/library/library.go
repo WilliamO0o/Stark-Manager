@@ -33,6 +33,8 @@ type System struct {
 	DuplicateGames      int            `json:"duplicate_games"`
 	Games               []Game         `json:"games"`
 	Unassociated        []Related      `json:"unassociated"`
+	UnknownFiles        []string       `json:"unknown_files"`
+	UninspectedPackages []string       `json:"uninspected_packages"`
 }
 
 type Game struct {
@@ -218,30 +220,49 @@ func (s *scanner) recordFile(system, name, previousVolume string, regular bool) 
 		}
 		return previous.category == "games", previous.complete
 	}
-	category := "unknown"
-	complete = true
+	category, complete := "unknown", true
 	if regular {
-		if isSNES(system) && strings.EqualFold(path.Ext(name), ".zip") {
-			game, err := zipHasSNESROM(s.root, name)
-			if err != nil {
-				s.pending(name, "não foi possível ler o índice ZIP: "+err.Error())
-				complete = false
-			} else if game {
-				category = "games"
-			}
-		} else {
-			category = classify(system, name)
-		}
+		category, complete = s.classifyFile(system, name)
 	}
 	s.files[loc] = fileResult{category, complete}
 	item.result.Counts[category]++
 	switch category {
 	case "games":
 		item.result.Games = append(item.result.Games, Game{Path: name, Related: []Related{}})
-	case "saves", "states", "images", "videos":
+	case "unknown":
+		item.result.UnknownFiles = append(item.result.UnknownFiles, name)
+	case "uninspected_packages":
+		item.result.UninspectedPackages = append(item.result.UninspectedPackages, name)
+	case "saves", "states", "images", "videos", "cheats", "audio", "replays", "possible_states":
 		item.related = append(item.related, Related{Path: name, Category: category})
 	}
 	return category == "games", complete
+}
+
+func (s *scanner) classifyFile(system, name string) (category string, complete bool) {
+	if isSNES(system) {
+		format := strings.ToUpper(strings.TrimPrefix(path.Ext(name), "."))
+		var inspect func(fs.FS, string) (bool, error)
+		switch format {
+		case "ZIP":
+			inspect = zipHasSNESROM
+		case "7Z":
+			inspect = sevenZipHasSNESROM
+			format = "7z"
+		}
+		if inspect != nil {
+			game, err := inspect(s.root, name)
+			if err != nil {
+				s.pending(name, "não foi possível ler o índice "+format+": "+err.Error())
+				return "unknown", false
+			}
+			if game {
+				return "games", true
+			}
+			return "unknown", true
+		}
+	}
+	return classify(system, name), true
 }
 
 func fileLocation(mount *diagnostic.Mount, name string) location {
@@ -261,6 +282,7 @@ func (s *scanner) origin(system, volume string, mount *diagnostic.Mount) *group 
 		s.groups[key] = &group{paths: make(map[string]bool), result: System{
 			Name: system, Partition: mount.Partition, Device: mount.Device,
 			Paths: []string{}, EmptyFolders: []string{}, FoldersWithoutGames: []string{}, Games: []Game{}, Unassociated: []Related{},
+			UnknownFiles: []string{}, UninspectedPackages: []string{},
 			Counts: map[string]int{"games": 0, "saves": 0, "states": 0, "images": 0, "videos": 0, "metadata": 0, "unknown": 0},
 		}}
 	}

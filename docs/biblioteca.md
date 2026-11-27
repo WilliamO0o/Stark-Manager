@@ -32,12 +32,25 @@ contam como entradas.
 O reconhecimento inicial de jogos cobre arquivos SNES em formatos
 `.sfc`, `.smc`, `.swc` e `.fig`. Extensões e nomes reconhecíveis de saves,
 estados, imagens, vídeos e metadados também são usados em outros sistemas.
-Um `.zip` na biblioteca SNES conta como um jogo se o índice contiver
-pelo menos um arquivo com uma dessas extensões. O inventário usa o nome-base
-do ZIP para as associações e consulta apenas o índice, sem extrair entradas.
-Um ZIP sem ROM reconhecida fica como desconhecido. Se o índice não puder
-ser lido, o ZIP também fica como desconhecido e aparece entre as pendências.
-Outros formatos compactados e jogos sem regra ficam como desconhecidos.
+Um `.zip` ou `.7z` na biblioteca SNES conta como um jogo quando seu
+índice contém pelo menos um arquivo com uma dessas extensões. O nome-base
+do pacote serve para as associações. A leitura consulta apenas o índice,
+sem extrair ou validar o conteúdo das entradas.
+
+O leitor 7z aceita índices simples e índices comprimidos com LZMA ou
+LZMA2. Os limites são de 4 MiB para o índice e sua forma descomprimida,
+8 MiB para o dicionário e 16.384 entradas. Um índice ilegível,
+criptografado, acima do limite ou com estrutura sem suporte gera uma
+pendência. Pacotes inspecionados sem ROM reconhecida e pacotes com
+pendência ficam como desconhecidos. Um `.rar` é registrado como pacote
+não inspecionado e fica fora da contagem de jogos.
+
+Em SNES, `.cht` indica cheat, `.spc` indica áudio e `.zmv` e `.zm1` a
+`.zm9` indicam replays do ZSNES. `.s00`, `.s01` e `.zss` entram como
+possíveis estados. O nome exato `gamelist.xml.old` entra como provável
+backup de metadados. O JSON lista os caminhos em `unknown_files` e
+`uninspected_packages`, além das contagens por categoria.
+
 A associação de um arquivo auxiliar requer uma correspondência única por
 nome-base dentro da mesma origem e sistema. O JSON apresenta as demais
 associações como `unassociated`.

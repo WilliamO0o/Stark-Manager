@@ -31,6 +31,19 @@ func WriteLibrary(w io.Writer, report library.Report) error {
 		counts := system.Counts
 		fmt.Fprintf(&out, "  Jogos: %d | saves: %d | estados: %d | imagens: %d | vídeos: %d | metadados: %d | desconhecidos: %d\n",
 			counts["games"], counts["saves"], counts["states"], counts["images"], counts["videos"], counts["metadata"], counts["unknown"])
+		var extras []string
+		for _, extra := range []struct{ key, label string }{
+			{"cheats", "cheats"}, {"audio", "áudio"}, {"replays", "replays"},
+			{"metadata_backups", "prováveis backups de metadados"}, {"possible_states", "possível estado"},
+			{"uninspected_packages", "pacote não inspecionado"},
+		} {
+			if count := counts[extra.key]; count != 0 {
+				extras = append(extras, fmt.Sprintf("%s: %d", extra.label, count))
+			}
+		}
+		if len(extras) != 0 {
+			fmt.Fprintln(&out, " ", strings.Join(extras, " | "))
+		}
 		fmt.Fprintf(&out, "  Pastas vazias: %d\n", len(system.EmptyFolders))
 		if system.DuplicateFiles > 0 {
 			fmt.Fprintf(&out, "  Arquivos já contados em outro caminho: %d\n", system.DuplicateFiles)
