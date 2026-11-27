@@ -29,10 +29,32 @@ devices, game saves and backups.
 
 ## 📌 Development Status
 
-🚧 Planning stage.
+A v0.1.1 inclui uma CLI de diagnóstico local para Linux.
+Ela lê informações do sistema, RAM, baterias e dispositivos de bloco
+e apresenta um resumo em português ou um relatório JSON versionado.
 
-The project is currently being designed.
-Development will begin as time permits.
+## Executar o diagnóstico
+
+Na raiz do repositório, com Go 1.22 ou posterior:
+
+```bash
+go run ./cmd/stark status
+go run ./cmd/stark status --json
+go run ./cmd/stark storage
+go run ./cmd/stark storage --json
+go run ./cmd/stark library
+go run ./cmd/stark library snes --json
+go test ./...
+go vet ./...
+```
+
+O [guia de diagnóstico](docs/diagnostico.md) descreve o relatório,
+as fontes consultadas e os principais arquivos do projeto. Veja também o
+[roteiro de teste no Kinhank K36](docs/teste-k36.md), com compilação ARM64,
+transferência por SCP e execução por SSH.
+
+O [guia da biblioteca de ROMs](docs/biblioteca.md) descreve a varredura,
+a classificação inicial e os limites do inventário.
 
 ## 👨‍💻 Developer
 
