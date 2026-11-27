@@ -46,11 +46,6 @@ func classify(system, name string) string {
 			return "replays"
 		case ext == ".s00" || ext == ".s01" || ext == ".zss":
 			return "possible_states"
-		case ext == ".rar":
-			return "uninspected_packages"
-		}
-		if snesROMExtension(ext) {
-			return "games"
 		}
 		if ext == ".zst" {
 			return "states"
@@ -64,15 +59,6 @@ func classify(system, name string) string {
 
 func isSNES(system string) bool {
 	return system == "snes" || system == "sfc" || system == "superfamicom"
-}
-
-func snesROMExtension(ext string) bool {
-	switch ext {
-	case ".sfc", ".smc", ".swc", ".fig":
-		return true
-	default:
-		return false
-	}
 }
 
 func stateStem(base string) (string, bool) {
@@ -100,9 +86,13 @@ func (item *group) finish() {
 	}
 	sort.Strings(item.result.Paths)
 	sort.Strings(item.result.EmptyFolders)
+	sort.Slice(item.result.Files, func(i, j int) bool { return item.result.Files[i].Path < item.result.Files[j].Path })
 	sort.Strings(item.result.FoldersWithoutGames)
 	sort.Strings(item.result.UnknownFiles)
 	sort.Strings(item.result.UninspectedPackages)
+	sort.Slice(item.result.ROMChecks, func(i, j int) bool {
+		return item.result.ROMChecks[i].Path < item.result.ROMChecks[j].Path
+	})
 	games := item.result.Games
 	sort.Slice(games, func(i, j int) bool { return games[i].Path < games[j].Path })
 	sort.Slice(item.related, func(i, j int) bool { return item.related[i].Path < item.related[j].Path })

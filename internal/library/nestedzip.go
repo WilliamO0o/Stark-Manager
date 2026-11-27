@@ -19,10 +19,10 @@ const (
 	maxNestedZIPEntries = 4096
 )
 
-func inspectNestedZIPs(reader io.ReaderAt, nextOffset uint64, catalog catalog7z) (bool, error) {
+func inspectNestedZIPs(reader io.ReaderAt, nextOffset uint64, catalog catalog7z) (romFormats, error) {
 	decoder := nestedDecoder{folder: -1, packedLeft: maxNestedStream, decodedLeft: maxNestedStream}
 	entriesLeft := maxNestedZIPEntries
-	var found bool
+	var found romFormats
 	var pending []error
 	for i, entry := range catalog.zips {
 		if i == maxNestedZIPs {
@@ -31,9 +31,9 @@ func inspectNestedZIPs(reader io.ReaderAt, nextOffset uint64, catalog catalog7z)
 		}
 		data, err := decoder.read(reader, nextOffset, catalog.streams, entry)
 		if err == nil {
-			var game bool
-			game, err = inspectInnerZIP(data, &entriesLeft)
-			found = found || game
+			var formats romFormats
+			formats, err = inspectInnerZIP(data, &entriesLeft)
+			found = append(found, formats...)
 		}
 		if err != nil {
 			pending = append(pending, fmt.Errorf("ZIP interno %q: %w", entry.name, err))
@@ -123,16 +123,17 @@ func (d *nestedDecoder) open(reader io.ReaderAt, nextOffset uint64, streams stre
 }
 
 // A ZIP directory is the last level we inspect. No ZIP entry is opened.
-func inspectInnerZIP(data []byte, entriesLeft *int) (bool, error) {
+func inspectInnerZIP(data []byte, entriesLeft *int) (romFormats, error) {
 	archive, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if len(archive.File) > *entriesLeft {
-		return false, errors.New("limite de entradas de ZIP interno excedido")
+		return nil, errors.New("limite de entradas de ZIP interno excedido")
 	}
 	*entriesLeft -= len(archive.File)
-	var found, encrypted, deeper bool
+	var found romFormats
+	var encrypted, deeper bool
 	for _, file := range archive.File {
 		if file.Flags&1 != 0 {
 			encrypted = true
@@ -142,7 +143,9 @@ func inspectInnerZIP(data []byte, entriesLeft *int) (bool, error) {
 			continue
 		}
 		extension := strings.ToLower(path.Ext(file.Name))
-		found = found || snesROMExtension(extension)
+		if knownROMExtension(extension) {
+			found.add(extension)
+		}
 		deeper = deeper || extension == ".zip" || extension == ".7z"
 	}
 	var pending []error

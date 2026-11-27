@@ -20,11 +20,11 @@ func TestLibraryInventory(t *testing.T) {
 	if !reflect.DeepEqual(report.Examined, []string{"/media/card/roms", "/roms", "/roms2"}) {
 		t.Fatalf("roots = %v", report.Examined)
 	}
-	if len(report.Systems) != 3 {
+	if len(report.Systems) != 4 {
 		t.Fatalf("systems = %+v", report.Systems)
 	}
-	if report.Systems[0].Name != "nes" || report.Systems[0].Counts["unknown"] != 1 {
-		t.Errorf("NES should be inventoried without guessing games: %+v", report.Systems[0])
+	if report.Systems[0].Name != "nes" || report.Systems[0].Counts["games"] != 1 {
+		t.Errorf("NES game should be recognized: %+v", report.Systems[0])
 	}
 	other, snes := report.Systems[1], report.Systems[2]
 	if other.Partition == nil || *other.Partition != "mmcblk1p1" || other.Counts["games"] != 1 {
@@ -64,7 +64,7 @@ func TestLibraryInventory(t *testing.T) {
 	}
 
 	filtered := collect(root, root, "SNES")
-	if filtered.Filter != "snes" || !reflect.DeepEqual(filtered.Systems, report.Systems[1:]) {
+	if filtered.Filter != "snes" || !reflect.DeepEqual(filtered.Systems, report.Systems[1:3]) {
 		t.Errorf("filter changed counts or kept other systems: %+v", filtered.Systems)
 	}
 	if only := collect(root, root, "nes"); len(only.Systems) != 1 || only.Systems[0].Name != "nes" {
@@ -74,7 +74,7 @@ func TestLibraryInventory(t *testing.T) {
 	if err := presentation.WriteLibrary(&out, report); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Sem jogos identificados", "Pastas vazias: 2", "mmcblk2/mmcblk2p1 — não examinado"} {
+	for _, want := range []string{"Nintendo", "Pastas vazias: 2", "mmcblk2/mmcblk2p1 — não examinado"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("missing %q in terminal report:\n%s", want, out.String())
 		}

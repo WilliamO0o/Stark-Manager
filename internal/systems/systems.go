@@ -209,3 +209,20 @@ func resolve(name, home string) string {
 func within(name, base string) bool {
 	return name != "" && base != "" && (name == base || strings.HasPrefix(name, strings.TrimSuffix(base, "/")+"/"))
 }
+
+// LibraryCatalog adapts all readable catalogs without selecting an active
+// configuration. Conflicting records remain available to the inventory.
+func LibraryCatalog(root fs.FS, home, configHome string) []library.CatalogEntry {
+	var entries []library.CatalogEntry
+	for _, catalog := range readCatalogs(root, home, configHome) {
+		for _, system := range catalog.Systems {
+			if name := resolve(system.Path, home); name != "" {
+				entries = append(entries, library.CatalogEntry{
+					Name: system.Name, FullName: system.FullName, Path: system.Path,
+					Extension: system.Extension, ResolvedPath: name,
+				})
+			}
+		}
+	}
+	return entries
+}

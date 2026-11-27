@@ -1,0 +1,171 @@
+nintendo	console	famicom	famicom	Famicom
+nintendo	console	fds	famicom disk system	Famicom Disk System
+nintendo	console	fds	fds	Famicom Disk System
+nintendo	handheld	gameandwatch	gameandwatch	Game & Watch
+nintendo	handheld	gameandwatch	gameandwatch	Game and Watch
+nintendo	handheld	gb	gb	Game Boy
+nintendo	handheld	gba	gba	Game Boy Advance
+nintendo	handheld	gbc	gbc	Game Boy Color
+nintendo	console	n64	n64	N64
+nintendo	console	n64	n64	Nintendo 64
+nintendo	console	n64dd	n64dd	N64DD
+nintendo	console	n64dd	n64dd	Nintendo 64DD
+nintendo	handheld	nds	nds	NDS
+nintendo	handheld	nds	nds	Nintendo DS
+nintendo	console	nes	nes	NES
+nintendo	console	nes	nes	Nintendo Entertainment System
+nintendo	handheld	pokemonmini	pokemonmini	Pokemon Mini
+nintendo	handheld	pokemonmini	pokemonmini	Pokémon Mini
+nintendo	console	satellaview	satellaview	Satellaview
+nintendo	console	sfc	sfc	Super Famicom
+nintendo	console	sgb	sgb	Super Game Boy
+nintendo	console	snes	snes	Super NES
+nintendo	console	snes	snes	Super Nintendo
+nintendo	console	snes	snes	Super Nintendo Entertainment System
+nintendo	console	snes-hacks	snes-hacks	Super NES Hacks
+nintendo	console	snesmsu1	snesmsu	Super NES CD
+nintendo	console	snesmsu1	snesmsu1	Super NES CD
+nintendo	console	sufami	snes	SuFami Turbo
+nintendo	console	sufami	sufami	SuFami Turbo
+nintendo	console	virtualboy	virtualboy	Virtual Boy
+nintendo	console	virtualboy	virtualboy	Virtualboy
+sega	arcade	atomiswave	Sega Atomiswave	Atomiswave
+sega	arcade	atomiswave	atomiswave	Atomiswave
+sega	console	dreamcast	dreamcast	Dreamcast
+sega	console	dreamcast	dreamcast	Sega Dreamcast
+sega	handheld	gamegear	gamegear	Game Gear
+sega	handheld	gamegear	gamegear	Sega Game Gear
+sega	console	genesis	genesis	Genesis
+sega	console	genesis	genesis	Sega Genesis
+sega	console	mastersystem	mastersystem	Master System
+sega	console	mastersystem	mastersystem	Sega Master System
+sega	console	megadrive	megadrive	Mega Drive
+sega	console	megadrive	megadrive	Megadrive
+sega	console	megadrive	megadrive	Sega Mega Drive
+sega	arcade	naomi	naomi	Naomi
+sega	arcade	naomi	naomi	Sega Naomi
+sega	console	saturn	saturn	Saturn
+sega	console	saturn	saturn	Sega Saturn
+sega	console	sega32x	sega32x	Sega 32X
+sega	console	segacd	segacd	Sega CD
+sega	console	sg-1000	sg-1000	SG-1000
+sega	console	sg-1000	sg-1000	Sega SG-1000
+sega	auxiliary	vmu	vmu	Dreamcast VMU
+sony	handheld	psp	ppsspp	PlayStation Portable
+sony	handheld	psp	psp	PlayStation Portable
+sony	handheld	pspminis	pspminis	Playstation Portable Minis
+sony	console	psx	psx	PlayStation
+atari	console	atari2600	atari2600	Atari 2600
+atari	console	atari5200	atari5200	Atari 5200
+atari	console	atari7800	atari7800	Atari 7800
+atari	computer	atari800	atari800	Atari 800
+atari	console	atarijaguar	atarijaguar	Atari Jaguar
+atari	console	atarijaguar	jaguar	Atari Jaguar
+atari	handheld	atarilynx	atarilynx	Atari Lynx
+atari	computer	atarist	atarist	Atari ST
+atari	console	atarixegs	atarixegs	Atari XEGS
+arcade	arcade	alg	alg	American Laser Games
+arcade	arcade	arcade	arcade	Arcade
+arcade	arcade	cps1	cps1	Capcom System I
+arcade	arcade	cps2	cps2	Capcom System II
+arcade	arcade	cps3	cps3	Capcom System III
+arcade	arcade	daphne	Daphne	Daphne
+arcade	arcade	daphne/roms	daphne	Daphne
+arcade	arcade	fbneo	fbneo	FBNeo
+arcade	arcade	fbneo	fbneo	FinalBurn Neo
+arcade	arcade	mame	mame	MAME
+arcade	arcade	mame	mame2010	MAME2010
+arcade	arcade	mame2003	mame2003	MAME2003
+arcade	arcade	neogeo	neogeo	Neo Geo
+arcade	arcade	neogeocd	neogeocd	Neo Geo CD
+computers	computer	amiga	amiga	Amiga
+computers	console	amigacd32	amigacd32	Amiga CD32
+computers	computer	amstradcpc	amstradcpc	CPC
+computers	computer	apple2	apple2	Apple II
+computers	computer	bbcmicro	bbcmicro	BBC Micro
+computers	computer	c128	c128	C128
+computers	computer	c16	c16	C16
+computers	computer	c64	c64	C64
+computers	computer	coco3	coco	Color Computer 3
+computers	computer	coco3	coco3	CoCo 3
+computers	computer	coco3	coco3	Color Computer 3
+computers	computer	dragon32	dragon32	Dragon 32/64
+computers	computer	enterprise	enterprise	Enterprise 64/128
+computers	computer	msx	msx	MSX
+computers	computer	msx2	msx2	MSX 2
+computers	computer	pc98	pc98	PC98
+computers	computer	thomson	thomson	Theodore Thomson
+computers	computer	ti99	ti99	TI99
+computers	computer	tvc	tvc	TV-Computer
+computers	computer	tvc	videoton	TV-Computer
+computers	computer	vic20	vic20	VIC-20
+computers	computer	vmac	macintosh	Macintosh
+computers	computer	vmac	vmac	Macintosh
+computers	computer	x1	x1	Sharp X1
+computers	computer	x68000	x68000	Sharp x68000
+computers	computer	zx81	zx81	ZX81
+computers	computer	zxspectrum	zxspectrum	ZX Spectrum
+engines	engine	cavestory	cavestory	Cave Story
+engines	engine	doom	doom	Doom
+engines	engine	easyrpg	easyrpg	EasyRPG
+engines	engine	love2d	love2d	Love2d
+engines	engine	onscripter	onscripter	ONScripter
+engines	engine	openbor	openbor	OpenBOR
+engines	engine	puzzlescript	puzzlescript	PuzzleScript
+engines	engine	scummvm	scummvm	SCUMM Virtual Machine
+engines	engine	solarus	solarus	Solarus
+engines	engine	wolf	wolf	Wolfenstein
+ports	port	ports	ports	Ports
+software	platform	dos	dos	DOS
+software	platform	dos	msdos	DOS
+software	platform	j2me	j2me	J2ME
+software	platform	lowresnx	lowresnx	LowRes NX
+software	platform	pico-8/carts	pico-8	PICO-8
+software	platform	tic80	tic-80	Tic-80
+software	platform	tic80	tic80	TIC-80
+software	platform	vircon32	vircon32	Vircon32
+software	platform	wasm4	wasm-4	WASM-4
+software	platform	wasm4	wasm4	WASM-4
+support	utility	backup	backup	Backup
+support	utility	backups	backups	Backups
+support	media	bgmusic	bgmusic	Background Music
+support	utility	bios	bios	BIOS
+support	media	launchimages	launchimages	Launch Images
+support	media	movies	movies	Movies
+support	media	movies	videos	Movies
+support	media	shutdownimages	shutdownimages	Shutdown Images
+support	utility	themes	themes	Themes
+support	utility	tools	tools	Tools
+other	console	3do	3do	3DO
+other	tabletop	advision	advision	Adventure Vision
+other	handheld	arduboy	arduboy	Arduboy
+other	console	astrocde	astrocade	Astrocade
+other	console	astrocde	astrocde	Astrocade
+other	console	channelf	channelf	ChannelF
+other	console	coleco	coleco	ColecoVision
+other	handheld	gamate	gamate	Gamate
+other	console	gametank	gametank	GameTank
+other	console	gx4000	gx4000	GX4000
+other	console	intellivision	intellivision	Intellivision
+other	handheld	megaduck	megaduck	Mega Duck
+other	handheld	mv	microvision	Microvision
+other	handheld	mv	mv	Microvision
+other	handheld	ngp	ngp	Neo Geo Pocket
+other	handheld	ngpc	ngpc	Neo Geo Pocket Color
+other	console	odyssey2	odyssey2	Odyssey2
+other	handheld	palm	palm	Palm
+other	console	pcengine	pcengine	PC Engine
+other	console	pcenginecd	pcenginecd	PC Engine CD
+other	console	pcfx	pcfx	PC-FX
+other	console	piece	piece	P/ECE
+other	console	scv	scv	Super Cassette Vision
+other	console	supergrafx	supergrafx	Super Grafx
+other	handheld	supervision	supervision	Supervision
+other	console	turbografx	turbografx16	Turbografx 16
+other	console	turbografxcd	turbografxcd	Turbografx CD
+other	console	uzebox	uzebox	Uzebox
+other	console	vectrex	vectrex	Vectrex
+other	console	videopac	videopac	Videopac G7000
+other	handheld	wonderswan	wonderswan	WonderSwan
+other	handheld	wonderswancolor	wonderswancolor	WonderSwan Color
+other	console	zeebo	zeebo	Zeebo

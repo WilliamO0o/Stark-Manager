@@ -26,8 +26,8 @@ func TestLibrarySNESZIP(t *testing.T) {
 		t.Fatalf("systems: %+v", report.Systems)
 	}
 	nes, snes := report.Systems[0], report.Systems[1]
-	if nes.Counts["games"] != 0 || nes.Counts["unknown"] != 1 {
-		t.Errorf("applied SNES rules to NES: %+v", nes.Counts)
+	if nes.Counts["games"] != 1 || len(nes.ROMChecks) != 1 || nes.ROMChecks[0].Comparison != "possible_wrong_folder" {
+		t.Errorf("SNES ZIP in NES was not diagnosed: %+v", nes)
 	}
 	if snes.Counts["games"] != 2 || snes.Counts["unknown"] != 2 ||
 		snes.Counts["saves"] != 1 || snes.Counts["states"] != 1 || len(snes.Games) != 2 {

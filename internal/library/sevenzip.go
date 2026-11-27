@@ -50,67 +50,67 @@ var (
 	errUnsupported7z = errors.New("estrutura ou compressão de índice 7z sem suporte")
 )
 
-func sevenZipHasSNESROM(root fs.FS, name string) (bool, error) {
+func sevenZipROMFormats(root fs.FS, name string) (romFormats, error) {
 	file, err := root.Open(strings.TrimPrefix(name, "/"))
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	defer file.Close()
 	info, err := file.Stat()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	reader, ok := file.(io.ReaderAt)
 	if !ok || !info.Mode().IsRegular() {
-		return false, errUnsupported7z
+		return nil, errUnsupported7z
 	}
 	return inspect7z(reader, info.Size())
 }
 
-func inspect7z(reader io.ReaderAt, size int64) (bool, error) {
+func inspect7z(reader io.ReaderAt, size int64) (romFormats, error) {
 	var signature [sevenZipHeaderSize]byte
 	if _, err := reader.ReadAt(signature[:], 0); err != nil {
-		return false, err
+		return nil, err
 	}
 	if string(signature[:6]) != "7z\xbc\xaf\x27\x1c" || signature[6] != 0 ||
 		crc32.ChecksumIEEE(signature[12:]) != binary.LittleEndian.Uint32(signature[8:12]) {
-		return false, errInvalid7z
+		return nil, errInvalid7z
 	}
 	offset := binary.LittleEndian.Uint64(signature[12:20])
 	length := binary.LittleEndian.Uint64(signature[20:28])
 	if length > maxIndexBytes {
-		return false, errLimited7z
+		return nil, errLimited7z
 	}
 	if size < sevenZipHeaderSize || offset > uint64(size-sevenZipHeaderSize) ||
 		length > uint64(size-sevenZipHeaderSize)-offset {
-		return false, errInvalid7z
+		return nil, errInvalid7z
 	}
 	if length == 0 && binary.LittleEndian.Uint32(signature[28:]) == 0 {
-		return false, nil // A valid empty archive has no next header.
+		return nil, nil // A valid empty archive has no next header.
 	}
 	index := make([]byte, int(length))
 	if _, err := reader.ReadAt(index, sevenZipHeaderSize+int64(offset)); err != nil {
-		return false, err
+		return nil, err
 	}
 	if crc32.ChecksumIEEE(index) != binary.LittleEndian.Uint32(signature[28:]) {
-		return false, errInvalid7z
+		return nil, errInvalid7z
 	}
 	if len(index) == 0 {
-		return false, errInvalid7z
+		return nil, errInvalid7z
 	}
 	if index[0] == idEncoded {
 		var err error
 		index, err = decode7zIndex(reader, offset, index[1:])
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 	}
 	catalog, err := inspect7zNames(index)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	nestedROM, pending := inspectNestedZIPs(reader, offset, catalog)
-	return catalog.hasROM || nestedROM, pending
+	nested, pending := inspectNestedZIPs(reader, offset, catalog)
+	return append(catalog.formats, nested...), pending
 }
 
 func decode7zIndex(reader io.ReaderAt, nextOffset uint64, index []byte) ([]byte, error) {
@@ -202,7 +202,7 @@ func open7zStream(codec coder7z, packed io.Reader, size, dictionaryLimit uint64)
 
 type catalog7z struct {
 	streams streams7z
-	hasROM  bool
+	formats romFormats
 	zips    []nestedZIP
 }
 
@@ -314,8 +314,8 @@ func read7zFiles(c *cursor7z, catalog *catalog7z) {
 			continue
 		}
 		extension := strings.ToLower(path.Ext(name))
-		if snesROMExtension(extension) {
-			catalog.hasROM = true
+		if knownROMExtension(extension) {
+			catalog.formats.add(extension)
 		} else if extension == ".zip" {
 			catalog.zips = append(catalog.zips, entry)
 		}
