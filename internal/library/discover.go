@@ -9,9 +9,9 @@ import (
 	"github.com/WilliamO0o/Stark-Manager/internal/diagnostic"
 )
 
-type libraryRoot struct {
-	path     string
-	observed bool
+type RootCandidate struct {
+	Path     string
+	Observed bool
 }
 
 func romRoot(name string) bool {
@@ -29,7 +29,8 @@ func auxiliary(name string) bool {
 	return strings.HasPrefix(name, ".")
 }
 
-func libraryRoots(storage diagnostic.StorageReport, mountAt func(string) *diagnostic.Mount) []libraryRoot {
+// DiscoverRoots returns conventional ROM directories to check in the mount namespace.
+func DiscoverRoots(storage diagnostic.StorageReport, mountAt func(string) *diagnostic.Mount) []RootCandidate {
 	candidates := map[string]bool{"/roms": false, "/roms2": false}
 	if storage.Mounts.Data != nil {
 		for _, mount := range *storage.Mounts.Data {
@@ -50,15 +51,16 @@ func libraryRoots(storage diagnostic.StorageReport, mountAt func(string) *diagno
 			}
 		}
 	}
-	result := make([]libraryRoot, 0, len(candidates))
+	result := make([]RootCandidate, 0, len(candidates))
 	for name, observed := range candidates {
-		result = append(result, libraryRoot{name, observed})
+		result = append(result, RootCandidate{name, observed})
 	}
-	sort.Slice(result, func(i, j int) bool { return result[i].path < result[j].path })
+	sort.Slice(result, func(i, j int) bool { return result[i].Path < result[j].Path })
 	return result
 }
 
-func unmountedCards(root fs.FS, storage diagnostic.StorageReport) []NotExamined {
+// UnexaminedCards identifies detected card storage without a linked visible mount.
+func UnexaminedCards(root fs.FS, storage diagnostic.StorageReport) []NotExamined {
 	result := []NotExamined{}
 	if storage.Devices.Data == nil {
 		return result

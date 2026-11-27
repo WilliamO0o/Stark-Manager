@@ -69,14 +69,14 @@ func (tree mountTree) visible(name string) *Mount {
 
 var errUnverifiedPath = errors.New("caminho com link simbólico, automontagem ou topologia ambígua")
 
-// Check one component at a time. Following symlinks or walking beneath autofs
-// could yield a different view from mountinfo or trigger a mount.
-func (tree mountTree) checkPath(name string, lstat func(string) (fs.FileInfo, error)) (fs.FileInfo, error) {
+// CheckMountedPath checks a clean absolute path without following symlinks
+// or walking beneath autofs.
+func CheckMountedPath(mountAt func(string) *Mount, name string, lstat func(string) (fs.FileInfo, error)) (fs.FileInfo, error) {
 	current := "/"
 	var last fs.FileInfo
 	for _, component := range strings.Split(strings.TrimPrefix(name, "/"), "/") {
 		current = path.Join(current, component)
-		mount := tree.visible(current)
+		mount := mountAt(current)
 		if mount == nil || mount.Filesystem == "autofs" {
 			return nil, errUnverifiedPath
 		}
@@ -120,7 +120,7 @@ func compareBind(bind *ConfiguredBind, tree mountTree, lstat func(string) (fs.Fi
 		bind.Reason = "a montagem visível no destino é ambígua"
 		return
 	}
-	targetInfo, err := tree.checkPath(target, lstat)
+	targetInfo, err := CheckMountedPath(tree.visible, target, lstat)
 	if actual.Target != target && (err == nil || errors.Is(err, fs.ErrNotExist)) {
 		bind.Status, bind.Reason = BindNotObserved, "nenhuma montagem visível no destino"
 		return
@@ -135,7 +135,7 @@ func compareBind(bind *ConfiguredBind, tree mountTree, lstat func(string) (fs.Fi
 		bind.Reason = "origem configurada inválida ou encoberta pelo próprio destino"
 		return
 	}
-	sourceInfo, err := tree.checkPath(source, lstat)
+	sourceInfo, err := CheckMountedPath(tree.visible, source, lstat)
 	if err != nil {
 		bind.Reason = "não foi possível verificar o caminho da origem: " + err.Error()
 		return

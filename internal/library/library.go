@@ -91,14 +91,14 @@ func Collect(root fs.FS, storage diagnostic.StorageReport, lstat func(string) (f
 		root: root, lstat: lstat, mountAt: storage.MountLookup(),
 		report: Report{
 			SchemaVersion: 1, Filter: strings.ToLower(filter), Examined: []string{},
-			Systems: []System{}, NotExamined: unmountedCards(root, storage),
+			Systems: []System{}, NotExamined: UnexaminedCards(root, storage),
 			Pending: []Pending{}, Limitations: []string{},
 		},
 		groups: make(map[groupKey]*group), files: make(map[location]fileResult), empty: make(map[location]bool), withoutGames: make(map[location]bool),
 	}
 	s.report.Limitations = append(s.report.Limitations, storage.Devices.Issues...)
 	s.report.Limitations = append(s.report.Limitations, storage.Mounts.Issues...)
-	for _, candidate := range libraryRoots(storage, s.mountAt) {
+	for _, candidate := range DiscoverRoots(storage, s.mountAt) {
 		s.scanRoot(candidate)
 	}
 	for _, item := range s.groups {
@@ -118,37 +118,37 @@ func Collect(root fs.FS, storage diagnostic.StorageReport, lstat func(string) (f
 	return s.report
 }
 
-func (s *scanner) scanRoot(candidate libraryRoot) {
-	if mount := s.mountAt(candidate.path); mount == nil || mount.Filesystem == "autofs" {
-		s.pending(candidate.path, "topologia indisponível ou automontagem")
+func (s *scanner) scanRoot(candidate RootCandidate) {
+	if mount := s.mountAt(candidate.Path); mount == nil || mount.Filesystem == "autofs" {
+		s.pending(candidate.Path, "topologia indisponível ou automontagem")
 		return
 	}
-	info, err := s.lstat(candidate.path)
+	info, err := s.lstat(candidate.Path)
 	if err != nil {
-		if candidate.observed || !errors.Is(err, fs.ErrNotExist) {
-			s.pending(candidate.path, err.Error())
+		if candidate.Observed || !errors.Is(err, fs.ErrNotExist) {
+			s.pending(candidate.Path, err.Error())
 		}
 		return
 	}
 	if !info.IsDir() {
-		if info.Mode()&fs.ModeSymlink != 0 || candidate.observed {
-			s.pending(candidate.path, "o caminho não é um diretório direto")
+		if info.Mode()&fs.ModeSymlink != 0 || candidate.Observed {
+			s.pending(candidate.Path, "o caminho não é um diretório direto")
 		}
 		return
 	}
-	entries, err := fs.ReadDir(s.root, strings.TrimPrefix(candidate.path, "/"))
+	entries, err := fs.ReadDir(s.root, strings.TrimPrefix(candidate.Path, "/"))
 	if err != nil {
-		s.pending(candidate.path, err.Error())
+		s.pending(candidate.Path, err.Error())
 	}
 	if err == nil || len(entries) > 0 {
-		s.report.Examined = append(s.report.Examined, candidate.path)
+		s.report.Examined = append(s.report.Examined, candidate.Path)
 	}
 	for _, entry := range entries {
 		name := strings.ToLower(entry.Name())
 		if auxiliary(name) {
 			continue
 		}
-		child := path.Join(candidate.path, entry.Name())
+		child := path.Join(candidate.Path, entry.Name())
 		if entry.IsDir() {
 			s.walk(name, child, "", make(map[location]bool))
 		} else if entry.Type()&fs.ModeSymlink != 0 {

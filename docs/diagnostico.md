@@ -1,4 +1,4 @@
-# Diagnóstico local v0.1.1
+# Diagnóstico local v0.1.2
 
 A CLI coleta um retrato do Linux em execução por meio de leituras em `/proc`,
 `/sys` e no arquivo `os-release`. Ela roda sem privilégios administrativos,
@@ -88,3 +88,23 @@ Caminhos com links simbólicos ou automontagens não são seguidos na verificaç
 Quando há submontagens em um `rbind`, esta versão não confirma a árvore
 recursiva. Os registros de montagem descrevem a visão do processo que executa
 a CLI e podem mudar durante a coleta.
+
+
+## Catálogo do EmulationStation
+
+Use `stark systems` para ver os arquivos de configuração encontrados e as
+diferenças em relação às bibliotecas montadas. `stark systems --json` inclui
+cada entrada na ordem do XML, inclusive nomes repetidos. O campo
+`extension` preserva a lista declarada. O conteúdo de `command` é ignorado.
+
+A busca inclui `/etc/emulationstation/es_systems.cfg`, locais de instalação
+do sistema e a configuração do usuário que executa o diagnóstico. Quando
+há vários candidatos, o relatório indica a ambiguidade e identifica quais
+foram lidos. Sem um catálogo válido e inequívoco, a cobertura das pastas
+permanece indeterminada.
+
+A comparação inclui as pastas de primeiro nível das bibliotecas descobertas
+e verifica diretamente os caminhos configurados, inclusive os aninhados.
+Um caminho ausente dentro de uma biblioteca examinada é distinguido de uma
+origem indisponível. Os binds confirmados pelo diagnóstico de armazenamento
+são apresentados como relações entre os caminhos relevantes.
