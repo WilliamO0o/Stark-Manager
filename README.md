@@ -3,6 +3,8 @@
 A game library and storage management project for
 Linux-based retro handheld consoles.
 
+O Stark Manager foi criado por Will Stark (O Mestre da Impressão 3D).
+
 ## 🎯 Project Goals
 
 Create an intuitive tool to manage games, storage
@@ -64,3 +66,10 @@ Will Stark
 
 Make managing retro game libraries simple, safe,
 flexible and accessible.
+
+## Licença
+
+Copyright (C) 2026 Will Stark (O Mestre da Impressão 3D)
+
+O Stark Manager é licenciado sob a GNU General Public License versão 3
+(GPL-3.0-only). O texto integral está no arquivo [LICENSE](LICENSE).
