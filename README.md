@@ -31,7 +31,7 @@ devices, game saves and backups.
 
 ## 📌 Development Status
 
-A v0.1.2 inclui uma CLI de diagnóstico local para Linux.
+A v0.2.0 inclui uma CLI de diagnóstico local para Linux.
 Ela lê informações do sistema, RAM, baterias e dispositivos de bloco
 e apresenta um resumo em português ou um relatório JSON versionado.
 

@@ -38,12 +38,23 @@ do pacote serve para as associações. A leitura consulta apenas o índice,
 sem extrair ou validar o conteúdo das entradas.
 
 O leitor 7z aceita índices simples e índices comprimidos com LZMA ou
-LZMA2. Os limites são de 4 MiB para o índice e sua forma descomprimida,
-8 MiB para o dicionário e 16.384 entradas. Um índice ilegível,
-criptografado, acima do limite ou com estrutura sem suporte gera uma
-pendência. Pacotes inspecionados sem ROM reconhecida e pacotes com
-pendência ficam como desconhecidos. Um `.rar` é registrado como pacote
-não inspecionado e fica fora da contagem de jogos.
+LZMA2. Os limites do índice externo são de 4 MiB antes e depois da
+descompressão, 8 MiB para o dicionário e 16.384 entradas.
+
+Quando um 7z contém ZIPs, o inventário carrega esses ZIPs em memória e
+consulta seus índices. O pacote externo continua contando uma vez,
+mesmo com várias versões de uma ROM. A inspeção para no primeiro nível
+de ZIPs internos. Por pacote 7z, ela examina até 16 ZIPs internos, com
+até 8 MiB por ZIP e 4.096 entradas no conjunto dos ZIPs. Os fluxos
+comprimidos e a leitura descomprimida têm limites de 32 MiB cada.
+A leitura de ZIPs internos em fluxos 7z simples, incluindo os sólidos,
+suporta Copy, LZMA e LZMA2, com dicionário de até 32 MiB.
+
+Índices ilegíveis, criptografia, estruturas sem suporte e limites
+excedidos geram pendências. Uma ROM reconhecida ainda conta quando outra
+entrada gera pendência. Sem ROM reconhecida, o pacote fica como
+desconhecido. Um `.rar` é registrado como pacote não inspecionado e fica
+fora da contagem de jogos.
 
 Em SNES, `.cht` indica cheat, `.spc` indica áudio e `.zmv` e `.zm1` a
 `.zm9` indicam replays do ZSNES. `.s00`, `.s01` e `.zss` entram como

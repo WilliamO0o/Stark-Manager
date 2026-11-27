@@ -14,7 +14,7 @@ import (
 )
 
 // 7z indexes may themselves be compressed. Bound their input, output and
-// decoder dictionary independently. No reader is created for file payloads.
+// decoder dictionary independently from the limits for embedded ZIPs.
 const (
 	sevenZipHeaderSize = 32
 	maxIndexBytes      = 4 << 20
@@ -105,7 +105,12 @@ func inspect7z(reader io.ReaderAt, size int64) (bool, error) {
 			return false, err
 		}
 	}
-	return inspect7zNames(index)
+	catalog, err := inspect7zNames(index)
+	if err != nil {
+		return false, err
+	}
+	nestedROM, pending := inspectNestedZIPs(reader, offset, catalog)
+	return catalog.hasROM || nestedROM, pending
 }
 
 func decode7zIndex(reader io.ReaderAt, nextOffset uint64, index []byte) ([]byte, error) {
@@ -151,35 +156,7 @@ func decode7zIndex(reader io.ReaderAt, nextOffset uint64, index []byte) ([]byte,
 }
 
 func unpack7zIndex(codec coder7z, packed []byte, size uint64) ([]byte, error) {
-	var stream io.Reader
-	var err error
-	switch codec.method {
-	case "\x00": // Copy
-		stream = bytes.NewReader(packed)
-	case "\x03\x01\x01": // LZMA
-		if len(codec.properties) != 5 {
-			return nil, errInvalid7z
-		}
-		if binary.LittleEndian.Uint32(codec.properties[1:]) > maxDictionary {
-			return nil, errLimited7z
-		}
-		var header [13]byte
-		copy(header[:], codec.properties)
-		binary.LittleEndian.PutUint64(header[5:], size)
-		stream, err = lzma.ReaderConfig{DictCap: maxDictionary}.NewReader(io.MultiReader(bytes.NewReader(header[:]), bytes.NewReader(packed)))
-	case "\x21": // LZMA2
-		if len(codec.properties) != 1 || codec.properties[0] > 40 {
-			return nil, errInvalid7z
-		}
-		prop := codec.properties[0]
-		dictionary := uint64(2|prop&1) << (prop/2 + 11)
-		if dictionary > maxDictionary {
-			return nil, errLimited7z
-		}
-		stream, err = lzma.Reader2Config{DictCap: int(dictionary)}.NewReader2(bytes.NewReader(packed))
-	default:
-		return nil, errUnsupported7z
-	}
+	stream, err := open7zStream(codec, bytes.NewReader(packed), size, maxDictionary)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +170,51 @@ func unpack7zIndex(codec coder7z, packed []byte, size uint64) ([]byte, error) {
 	return decoded, nil
 }
 
-func inspect7zNames(index []byte) (bool, error) {
+func open7zStream(codec coder7z, packed io.Reader, size, dictionaryLimit uint64) (io.Reader, error) {
+	switch codec.method {
+	case "\x00": // Copy
+		return packed, nil
+	case "\x03\x01\x01": // LZMA
+		if len(codec.properties) != 5 {
+			return nil, errInvalid7z
+		}
+		if uint64(binary.LittleEndian.Uint32(codec.properties[1:])) > dictionaryLimit {
+			return nil, errLimited7z
+		}
+		var header [13]byte
+		copy(header[:], codec.properties)
+		binary.LittleEndian.PutUint64(header[5:], size)
+		return lzma.ReaderConfig{DictCap: int(dictionaryLimit)}.NewReader(io.MultiReader(bytes.NewReader(header[:]), packed))
+	case "\x21": // LZMA2
+		if len(codec.properties) != 1 || codec.properties[0] > 40 {
+			return nil, errInvalid7z
+		}
+		prop := codec.properties[0]
+		dictionary := uint64(2|prop&1) << (prop/2 + 11)
+		if dictionary > dictionaryLimit {
+			return nil, errLimited7z
+		}
+		return lzma.Reader2Config{DictCap: int(dictionary)}.NewReader2(packed)
+	default:
+		return nil, errUnsupported7z
+	}
+}
+
+type catalog7z struct {
+	streams streams7z
+	hasROM  bool
+	zips    []nestedZIP
+}
+
+type nestedZIP struct {
+	name   string
+	folder int
+	offset uint64
+	size   uint64
+}
+
+func inspect7zNames(index []byte) (catalog7z, error) {
+	var catalog catalog7z
 	c := cursor7z{data: index}
 	c.expect(idHeader)
 	if c.match(idProperties) {
@@ -204,30 +225,25 @@ func inspect7zNames(index []byte) (bool, error) {
 	}
 	if c.match(idAdditional) {
 		// This can contain externally stored names. Do not read those streams.
-		return false, errUnsupported7z
+		return catalog7z{}, errUnsupported7z
 	}
-	var streamCount uint64
 	if c.match(idMain) {
-		streams := read7zStreams(&c)
-		for _, folder := range streams.folders {
-			streamCount += folder.streams
-		}
+		catalog.streams = read7zStreams(&c)
 	}
-	var found bool
 	if c.match(idFiles) {
-		found = read7zFiles(&c, streamCount)
+		read7zFiles(&c, &catalog)
 	}
 	c.expect(idEnd)
 	if c.err != nil {
-		return false, c.err
+		return catalog7z{}, c.err
 	}
 	if len(c.data) != 0 {
-		return false, errInvalid7z
+		return catalog7z{}, errInvalid7z
 	}
-	return found, nil
+	return catalog, nil
 }
 
-func read7zFiles(c *cursor7z, streams uint64) bool {
+func read7zFiles(c *cursor7z, catalog *catalog7z) {
 	files := c.count(maxIndexEntries)
 	var names, empty, emptyFiles, anti []byte
 	var attributes []uint32
@@ -256,29 +272,36 @@ func read7zFiles(c *cursor7z, streams uint64) bool {
 	emptyCount := uint64(0)
 	if empty != nil && uint64(len(empty)) != (files+7)/8 {
 		c.fail(errInvalid7z)
-		return false
+		return
 	}
 	for i := uint64(0); i < files; i++ {
 		if bit7z(empty, i) {
 			emptyCount++
 		}
 	}
+	var streams uint64
+	for _, folder := range catalog.streams.folders {
+		streams += folder.streams
+	}
 	if streams != files-emptyCount ||
 		(emptyFiles != nil && uint64(len(emptyFiles)) != (emptyCount+7)/8) ||
 		(anti != nil && uint64(len(anti)) != (emptyCount+7)/8) {
 		c.fail(errInvalid7z)
-		return false
+		return
 	}
 
 	n := cursor7z{data: names}
-	found := false
+	streamsAt := fileStreams7z{folders: catalog.streams.folders}
 	emptyIndex := uint64(0)
 	for i := uint64(0); i < files && n.err == nil; i++ {
 		name := n.name()
 		regular := true
+		entry := nestedZIP{name: name, folder: -1}
 		if bit7z(empty, i) {
 			regular = bit7z(emptyFiles, emptyIndex) && !bit7z(anti, emptyIndex)
 			emptyIndex++
+		} else {
+			entry = streamsAt.next(name)
 		}
 		if attributes != nil {
 			const directory = 0x10
@@ -287,15 +310,19 @@ func read7zFiles(c *cursor7z, streams uint64) bool {
 			kind := attributes[i] >> 16 & unixType
 			regular = regular && attributes[i]&directory == 0 && (kind == 0 || kind == unixRegular)
 		}
-		if regular && !strings.HasSuffix(name, "/") && !strings.HasSuffix(name, "\\") &&
-			snesROMExtension(strings.ToLower(path.Ext(name))) {
-			found = true
+		if !regular || strings.HasSuffix(name, "/") || strings.HasSuffix(name, "\\") {
+			continue
+		}
+		extension := strings.ToLower(path.Ext(name))
+		if snesROMExtension(extension) {
+			catalog.hasROM = true
+		} else if extension == ".zip" {
+			catalog.zips = append(catalog.zips, entry)
 		}
 	}
 	if n.err != nil || len(n.data) != 0 {
 		c.fail(errInvalid7z)
 	}
-	return found
 }
 
 func read7zAttributes(parent *cursor7z, data []byte, files uint64) []uint32 {

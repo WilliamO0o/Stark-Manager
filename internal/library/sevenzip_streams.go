@@ -103,6 +103,8 @@ type folder7z struct {
 	outputSize uint64
 	packed     uint64
 	streams    uint64
+	firstPack  uint64
+	subSizes   []uint64
 	crc        *uint32
 }
 
@@ -145,6 +147,7 @@ func read7zStreams(c *cursor7z) streams7z {
 		packed := uint64(0)
 		for i := range info.folders {
 			folder := &info.folders[i]
+			folder.firstPack = packed
 			packed += folder.packed
 			for j := uint64(0); j < folder.outputs && c.err == nil; j++ {
 				size := c.number()
@@ -238,11 +241,25 @@ func read7zSubstreams(c *cursor7z, folders []folder7z) {
 			}
 		}
 	}
-	if c.match(idSize) {
-		for _, folder := range folders {
-			for i := uint64(1); i < folder.streams && c.err == nil; i++ {
-				c.number()
+	hasSizes := c.match(idSize)
+	for i := range folders {
+		folder := &folders[i]
+		remaining := folder.outputSize
+		for j := uint64(1); j < folder.streams && c.err == nil; j++ {
+			if !hasSizes {
+				c.fail(errInvalid7z)
+				return
 			}
+			size := c.number()
+			if size > remaining {
+				c.fail(errInvalid7z)
+				return
+			}
+			folder.subSizes = append(folder.subSizes, size)
+			remaining -= size
+		}
+		if folder.streams > 1 {
+			folder.subSizes = append(folder.subSizes, remaining)
 		}
 	}
 	if c.match(idCRC) {
@@ -269,4 +286,28 @@ func read7zDigests(c *cursor7z, count uint64, save func(uint64, uint32)) {
 			}
 		}
 	}
+}
+
+// 7z assigns each nonempty file to a substream in archive order.
+type fileStreams7z struct {
+	folders []folder7z
+	folder  int
+	index   uint64
+	offset  uint64
+}
+
+func (s *fileStreams7z) next(name string) nestedZIP {
+	for s.index == s.folders[s.folder].streams {
+		s.folder++
+		s.index, s.offset = 0, 0
+	}
+	folder := s.folders[s.folder]
+	size := folder.outputSize
+	if folder.streams > 1 {
+		size = folder.subSizes[s.index]
+	}
+	entry := nestedZIP{name: name, folder: s.folder, offset: s.offset, size: size}
+	s.index++
+	s.offset += size
+	return entry
 }

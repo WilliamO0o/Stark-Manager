@@ -14,7 +14,7 @@ import (
 	"github.com/WilliamO0o/Stark-Manager/internal/systems"
 )
 
-const version = "0.1.2"
+const version = "0.2.0"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))

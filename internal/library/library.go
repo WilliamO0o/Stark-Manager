@@ -253,13 +253,16 @@ func (s *scanner) classifyFile(system, name string) (category string, complete b
 		if inspect != nil {
 			game, err := inspect(s.root, name)
 			if err != nil {
-				s.pending(name, "não foi possível ler o índice "+format+": "+err.Error())
-				return "unknown", false
+				reason := "não foi possível ler o índice "
+				if game {
+					reason = "inspeção incompleta do índice "
+				}
+				s.pending(name, reason+format+": "+err.Error())
 			}
 			if game {
-				return "games", true
+				return "games", err == nil
 			}
-			return "unknown", true
+			return "unknown", err == nil
 		}
 	}
 	return classify(system, name), true
