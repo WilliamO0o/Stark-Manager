@@ -15,6 +15,7 @@ type PortItem struct {
 }
 
 type PortInventory struct {
+	LocalSource *LocalSource `json:"local_source,omitempty"`
 	PortItem
 	LauncherCount      int              `json:"launcher_count"`
 	CatalogEntries     []CatalogEntry   `json:"catalog_entries,omitempty"`
@@ -30,13 +31,13 @@ func portItem(name string, mount *diagnostic.Mount) PortItem {
 }
 
 func (s *scanner) scanPorts(name string, entries []CatalogEntry) {
-	mount := s.mountAt(name)
+	mount := s.scanMount(name, s.active.source)
 	if mount == nil || mount.Filesystem == "autofs" {
 		s.pending(name, "origem de Ports indisponível ou automontagem")
 		return
 	}
 	inventory := PortInventory{
-		PortItem: portItem(name, mount), CatalogEntries: entries, Files: []ClassifiedFile{}, Launchers: []PortItem{}, RelatedDirectories: []PortItem{}, Metadata: []PortItem{},
+		PortItem: portItem(name, mount), LocalSource: s.active.source, CatalogEntries: entries, Files: []ClassifiedFile{}, Launchers: []PortItem{}, RelatedDirectories: []PortItem{}, Metadata: []PortItem{},
 	}
 	s.walkPorts(&inventory, name, mount, make(map[location]bool))
 	inventory.LauncherCount = len(inventory.Launchers)
@@ -44,7 +45,7 @@ func (s *scanner) scanPorts(name string, entries []CatalogEntry) {
 }
 
 func (s *scanner) walkPorts(inventory *PortInventory, name string, mount *diagnostic.Mount, ancestors map[location]bool) {
-	loc := fileLocation(mount, name)
+	loc := s.sourceLocation(mount, name)
 	if ancestors[loc] {
 		s.pending(name, "ciclo de diretórios em Ports")
 		return
@@ -68,12 +69,12 @@ func (s *scanner) walkPorts(inventory *PortInventory, name string, mount *diagno
 		launcher = launcher && entry.Type().IsRegular()
 		metadata = metadata && entry.Type().IsRegular()
 		child := path.Join(name, entry.Name())
-		childMount := s.mountAt(child)
+		childMount := s.scanMount(child, s.active.source)
 		if childMount == nil || childMount.Filesystem == "autofs" {
 			s.pending(child, "origem de Ports indisponível ou automontagem")
 			continue
 		}
-		loc := fileLocation(childMount, child)
+		loc := s.sourceLocation(childMount, child)
 		seen := s.portEntries[loc]
 		s.portEntries[loc] = true
 		item := portItem(child, childMount)

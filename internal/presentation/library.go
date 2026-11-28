@@ -30,6 +30,9 @@ func WriteLibraryNotes(w io.Writer, report library.Report) error {
 func writeLibrary(w io.Writer, report library.Report, summaries bool) error {
 	var out strings.Builder
 	out.WriteString("BIBLIOTECA DE ROMs\n")
+	for _, source := range report.LocalSources {
+		fmt.Fprintf(&out, "Backup local %q: %q\n", source.Name, source.OriginalPath)
+	}
 	for _, root := range report.Examined {
 		fmt.Fprintf(&out, "Biblioteca examinada: %s\n", strconv.Quote(root))
 	}
@@ -65,7 +68,9 @@ func writeLibrary(w io.Writer, report library.Report, summaries bool) error {
 				lastFamily = family
 			}
 			origin := "origem desconhecida"
-			if system.Partition != nil {
+			if system.LocalSource != nil {
+				origin = "backup local " + strconv.Quote(system.LocalSource.Name)
+			} else if system.Partition != nil {
 				origin = "partição " + *system.Partition
 			} else if system.Device != nil {
 				origin = "dispositivo " + *system.Device
@@ -136,7 +141,9 @@ func writeLibrary(w io.Writer, report library.Report, summaries bool) error {
 					continue
 				}
 				origin := "origem desconhecida"
-				if ports.Partition != nil {
+				if ports.LocalSource != nil {
+					origin = "backup local " + strconv.Quote(ports.LocalSource.Name)
+				} else if ports.Partition != nil {
 					origin = "partição " + *ports.Partition
 				} else if ports.Device != nil {
 					origin = "dispositivo " + *ports.Device

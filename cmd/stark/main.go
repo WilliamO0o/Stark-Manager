@@ -17,7 +17,7 @@ import (
 	"github.com/WilliamO0o/Stark-Manager/internal/systems"
 )
 
-const version = "0.3.0"
+const version = "0.4.1"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -26,12 +26,13 @@ func main() {
 func run(args []string, stdout, stderr io.Writer) int {
 	usage := func(w io.Writer) {
 		fmt.Fprintln(w, "Uso: stark {status|storage|systems} [--json]")
-		fmt.Fprintln(w, "     stark library [sistema] [--json] [--refresh]\n     stark library {cache|warnings} [sistema] [--json]")
+		fmt.Fprintln(w, "     stark library [sistema] [--root PATH]... [--json] [--refresh]\n     stark library {cache|warnings} [sistema] [--json]")
 	}
 	// Preserve the JSON output of the original, argument-free invocation.
 	asJSON := len(args) == 0
 	var filter, libraryMode string
 	var force bool
+	var roots []string
 	if len(args) > 0 {
 		switch args[0] {
 		case "-h", "--help", "help":
@@ -42,10 +43,27 @@ func run(args []string, stdout, stderr io.Writer) int {
 			if len(libraryArgs) > 0 && (libraryArgs[0] == "cache" || libraryArgs[0] == "warnings") {
 				libraryMode, libraryArgs = libraryArgs[0], libraryArgs[1:]
 			}
-			for _, arg := range libraryArgs {
+			for i := 0; i < len(libraryArgs); i++ {
+				arg := libraryArgs[i]
+				if libraryMode == "" && (arg == "--root" || strings.HasPrefix(arg, "--root=")) {
+					value, inline := strings.CutPrefix(arg, "--root=")
+					if !inline {
+						value = ""
+					}
+					if !inline && i+1 < len(libraryArgs) && !strings.HasPrefix(libraryArgs[i+1], "-") {
+						i++
+						value = libraryArgs[i]
+					}
+					if value == "" {
+						fmt.Fprintln(stderr, "stark: --root requer um caminho")
+						return 2
+					}
+					roots = append(roots, value)
+					continue
+				}
 				switch {
 				case arg == "--help" || arg == "-h":
-					fmt.Fprintln(stdout, "Uso: stark library [sistema] [--json] [--refresh]\n     stark library {cache|warnings} [sistema] [--json]")
+					fmt.Fprintln(stdout, "Uso: stark library [sistema] [--root PATH]... [--json] [--refresh]\n     stark library {cache|warnings} [sistema] [--json]")
 					return 0
 				case arg == "--json":
 					asJSON = true
@@ -98,7 +116,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			err = presentation.WriteSystems(stdout, report)
 		}
 	} else if len(args) > 0 && args[0] == "library" {
-		err = runLibrary(root, stdout, stderr, encoder, filter, libraryMode, asJSON, force)
+		err = runLibrary(root, stdout, stderr, encoder, filter, libraryMode, asJSON, force, roots)
 	} else if len(args) > 0 && args[0] == "storage" {
 		report := diagnostic.CollectStorage(root, os.Lstat)
 		if asJSON {
@@ -121,7 +139,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func runLibrary(root fs.FS, stdout, stderr io.Writer, encoder *json.Encoder, filter, mode string, asJSON, force bool) error {
+func runLibrary(root fs.FS, stdout, stderr io.Writer, encoder *json.Encoder, filter, mode string, asJSON, force bool, roots []string) error {
 	base, cacheErr := os.UserCacheDir()
 	cache := library.Cache{Dir: filepath.Join(base, "stark-manager")}
 	if mode != "" {
@@ -135,7 +153,7 @@ func runLibrary(root fs.FS, stdout, stderr io.Writer, encoder *json.Encoder, fil
 		return presentation.WriteCacheReport(stdout, report, mode == "warnings")
 	}
 	var progress *presentation.LibraryProgress
-	options := library.UpdateOptions{Force: force, VolumeID: library.LocalVolumeID}
+	options := library.UpdateOptions{Roots: roots, Force: force, VolumeID: library.LocalVolumeID}
 	if !asJSON && presentation.IsTerminal(stdout) && presentation.IsTerminal(stderr) {
 		progress = presentation.NewLibraryProgress(stderr, filter)
 		options.Progress = progress.Event

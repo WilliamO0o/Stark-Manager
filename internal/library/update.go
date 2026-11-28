@@ -10,6 +10,8 @@ import (
 )
 
 type UpdateOptions struct {
+	// Roots replaces automatic discovery when the list is nonempty.
+	Roots    []string
 	Cache    *Cache
 	Force    bool
 	VolumeID func(*diagnostic.Mount) string
@@ -28,6 +30,7 @@ type Event struct {
 type folderJob struct {
 	system, name string
 	identity     familyIdentity
+	source       *LocalSource
 }
 
 func (s *scanner) event(phase string, snapshot *Snapshot) {
@@ -42,16 +45,22 @@ func (s *scanner) updateFolders() {
 		if a.system != b.system {
 			return a.system < b.system
 		}
-		return a.name < b.name
+		if a.name != b.name {
+			return a.name < b.name
+		}
+		return a.source != nil && b.source != nil && a.source.Path < b.source.Path
 	})
 	all := s.groups
 	for _, job := range s.jobs {
 		s.active, s.examinedFiles, s.folderEmpty = job, 0, false
 		s.groups = make(map[groupKey]*group)
 		s.previous, s.current = nil, make(map[string]FileRecord)
-		mount := s.mountAt(job.name)
+		mount := s.scanMount(job.name, job.source)
 		identity := s.volumeID(mount)
 		key := job.name + "\x00" + identity
+		if job.source != nil {
+			key = job.source.Path + "\x00" + key
+		}
 		if s.options.Cache != nil {
 			previous, err := s.options.Cache.load(key)
 			if err != nil {
@@ -81,7 +90,7 @@ func (s *scanner) updateFolders() {
 		}
 		result := Snapshot{
 			ExaminedAt: time.Now().UTC(), RulesVersion: RulesVersion, System: job.system,
-			Path: job.name, VolumeID: identity, Files: s.current,
+			Path: job.name, LocalSource: job.source, VolumeID: identity, Files: s.current,
 			Systems: []System{}, Ports: s.report.Ports[portsStart:],
 			Pending: s.report.Pending[pendingStart:], Empty: s.folderEmpty, Complete: complete && len(s.report.Pending) == pendingStart,
 		}
@@ -133,7 +142,7 @@ func mergeGroup(dst, src *group) {
 }
 
 func (s *scanner) volumeID(mount *diagnostic.Mount) string {
-	if mount == nil || s.options.VolumeID == nil {
+	if mount == nil || mount == &unlinkedLocalMount || s.options.VolumeID == nil {
 		return ""
 	}
 	if id, ok := s.volumeIDs[mount.MajorMinor]; ok {

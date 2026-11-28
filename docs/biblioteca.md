@@ -147,3 +147,19 @@ indisponível, a leitura ao vivo continua.
 desconectados. A cobertura inclui apenas as pastas registradas, e cada
 resultado mostra a origem e a data da análise. Use `--json` para obter
 um único documento sem linhas de progresso.
+
+## Backups locais
+
+Informe uma ou mais raízes para examinar apenas as bibliotecas indicadas.
+O filtro de sistema continua opcional.
+
+```bash
+stark library --root "/dados/Backup A/EASYROMS"
+stark library gb --root "/dados/Backup A/EASYROMS" --root "/dados/Backup B/EEROMS" --json
+```
+
+O relatório preserva o caminho fornecido e identifica cada backup
+separadamente. O cache separa as entradas por raiz e permanece fora das
+bibliotecas. A reutilização de classificações continua condicionada à
+identidade confiável do volume. Caminhos ausentes ou ilegíveis aparecem
+como pendências, e as outras pastas continuam sendo examinadas.

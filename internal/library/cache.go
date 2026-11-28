@@ -29,6 +29,7 @@ type FileRecord struct {
 }
 
 type Snapshot struct {
+	LocalSource  *LocalSource          `json:"local_source,omitempty"`
 	ExaminedAt   time.Time             `json:"examined_at"`
 	RulesVersion int                   `json:"rules_version"`
 	System       string                `json:"system"`

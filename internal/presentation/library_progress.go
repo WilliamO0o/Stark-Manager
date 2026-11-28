@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -78,6 +79,9 @@ func (p *LibraryProgress) Finish() {
 
 func snapshotOrigin(snapshot library.Snapshot) string {
 	origin := "origem indeterminada"
+	if snapshot.LocalSource != nil {
+		return "backup local " + strconv.Quote(snapshot.LocalSource.Name)
+	}
 	if snapshot.Partition != nil {
 		origin = *snapshot.Partition
 	} else if snapshot.Device != nil {
@@ -151,8 +155,9 @@ func writeSnapshot(out io.Writer, snapshot library.Snapshot, cached bool) {
 
 type CachedWarning struct {
 	library.ROMCheck
-	ExaminedAt time.Time `json:"examined_at"`
-	VolumeID   string    `json:"volume_id"`
+	ExaminedAt  time.Time            `json:"examined_at"`
+	VolumeID    string               `json:"volume_id"`
+	LocalSource *library.LocalSource `json:"local_source,omitempty"`
 }
 
 type CacheReport struct {
@@ -173,7 +178,7 @@ func ReadCacheReport(cache library.Cache, filter string, warningsOnly bool) Cach
 				for _, check := range system.ROMChecks {
 					if check.Comparison == library.ROMWrongFolder {
 						origin := snapshot.Files[check.Path].VolumeID
-						report.Warnings = append(report.Warnings, CachedWarning{check, snapshot.ExaminedAt, origin})
+						report.Warnings = append(report.Warnings, CachedWarning{check, snapshot.ExaminedAt, origin, snapshot.LocalSource})
 					}
 				}
 			}
@@ -207,7 +212,9 @@ func WriteCacheReport(out io.Writer, report CacheReport, warningsOnly bool) erro
 	}
 	for _, warning := range report.Warnings {
 		origin := warning.MountTarget
-		if warning.Partition != nil {
+		if warning.LocalSource != nil {
+			origin = "backup local " + strconv.Quote(warning.LocalSource.Name)
+		} else if warning.Partition != nil {
 			origin = *warning.Partition
 		} else if warning.Device != nil {
 			origin = *warning.Device

@@ -12,6 +12,7 @@ import (
 )
 
 type Report struct {
+	LocalSources       []*LocalSource  `json:"local_sources,omitempty"`
 	SchemaVersion      int             `json:"schema_version"`
 	Filter             string          `json:"filter,omitempty"`
 	Examined           []string        `json:"examined_roots"`
@@ -24,6 +25,7 @@ type Report struct {
 }
 
 type System struct {
+	LocalSource         *LocalSource     `json:"local_source,omitempty"`
 	Files               []ClassifiedFile `json:"files"`
 	Name                string           `json:"name"`
 	Family              string           `json:"family"`
@@ -76,11 +78,12 @@ type NotExamined struct {
 }
 
 type location struct {
+	source string
 	volume string
 	root   string
 }
 
-type groupKey struct{ system, volume string }
+type groupKey struct{ system, volume, source string }
 type group struct {
 	result  System
 	paths   map[string]bool
@@ -133,7 +136,7 @@ func Update(root fs.FS, storage diagnostic.StorageReport, lstat func(string) (fs
 		sharedExtensions: make(map[string]bool), portEntries: make(map[location]bool),
 		report: Report{
 			SchemaVersion: 1, Filter: strings.ToLower(filter), Examined: []string{},
-			Systems: []System{}, NotExamined: UnexaminedCards(root, storage),
+			Systems: []System{}, NotExamined: []NotExamined{},
 			Pending: []Pending{}, Limitations: []string{}, Ports: []PortInventory{}, EmptySystemFolders: []string{},
 		},
 		groups: make(map[groupKey]*group), files: make(map[location]fileResult), empty: make(map[location]bool), withoutGames: make(map[location]bool),
@@ -143,8 +146,13 @@ func Update(root fs.FS, storage diagnostic.StorageReport, lstat func(string) (fs
 	for extension := range romSystemByExtension {
 		s.sharedExtensions[extension] = sharedROMExtension(extension, catalog)
 	}
-	for _, candidate := range DiscoverRoots(storage, s.mountAt) {
-		s.scanRoot(candidate)
+	if len(options.Roots) > 0 {
+		s.discoverLocalSources()
+	} else {
+		s.report.NotExamined = UnexaminedCards(root, storage)
+		for _, candidate := range DiscoverRoots(storage, s.mountAt) {
+			s.scanRoot(candidate, nil)
+		}
 	}
 	s.updateFolders()
 	for _, item := range s.groups {
@@ -165,8 +173,8 @@ func Update(root fs.FS, storage diagnostic.StorageReport, lstat func(string) (fs
 	return s.report
 }
 
-func (s *scanner) scanRoot(candidate RootCandidate) {
-	if mount := s.mountAt(candidate.Path); mount == nil || mount.Filesystem == "autofs" {
+func (s *scanner) scanRoot(candidate RootCandidate, source *LocalSource) {
+	if mount := s.scanMount(candidate.Path, source); mount == nil || mount.Filesystem == "autofs" {
 		s.pending(candidate.Path, "topologia indisponível ou automontagem")
 		return
 	}
@@ -183,7 +191,11 @@ func (s *scanner) scanRoot(candidate RootCandidate) {
 		}
 		return
 	}
-	entries, err := fs.ReadDir(s.root, strings.TrimPrefix(candidate.Path, "/"))
+	dir := strings.TrimPrefix(candidate.Path, "/")
+	if dir == "" {
+		dir = "."
+	}
+	entries, err := fs.ReadDir(s.root, dir)
 	if err != nil {
 		s.pending(candidate.Path, err.Error())
 	}
@@ -200,7 +212,7 @@ func (s *scanner) scanRoot(candidate RootCandidate) {
 			identity := identifyFolder(candidate.Path, entry.Name(), s.catalog)
 			s.identities[child] = identity
 			if !auxiliary(name) || name == "ports" || identity.family == "support" {
-				s.jobs = append(s.jobs, folderJob{name, child, identity})
+				s.jobs = append(s.jobs, folderJob{system: name, name: child, identity: identity, source: source})
 			}
 		} else if !auxiliary(name) && entry.Type()&fs.ModeSymlink != 0 {
 			s.pending(child, "link simbólico não seguido")
@@ -209,12 +221,12 @@ func (s *scanner) scanRoot(candidate RootCandidate) {
 }
 
 func (s *scanner) walk(system, name, previousVolume string, ancestors map[location]bool) (hasGames, complete bool) {
-	mount := s.mountAt(name)
+	mount := s.scanMount(name, s.active.source)
 	if mount == nil || mount.Filesystem == "autofs" {
 		s.pending(name, "topologia indisponível ou automontagem")
 		return false, false
 	}
-	loc := fileLocation(mount, name)
+	loc := s.sourceLocation(mount, name)
 	if ancestors[loc] {
 		s.pending(name, "ciclo de diretórios detectado")
 		return false, false
@@ -256,12 +268,12 @@ func (s *scanner) walk(system, name, previousVolume string, ancestors map[locati
 
 func (s *scanner) recordFile(system, name, previousVolume string, regular bool) (hasGame, complete bool) {
 	s.noteFile()
-	mount := s.mountAt(name)
+	mount := s.scanMount(name, s.active.source)
 	if mount == nil || mount.Filesystem == "autofs" {
 		s.pending(name, "topologia indisponível ou automontagem")
 		return false, false
 	}
-	loc := fileLocation(mount, name)
+	loc := s.sourceLocation(mount, name)
 	item := s.origin(system, loc.volume, mount)
 	if loc.volume != previousVolume {
 		item.paths[name] = true
@@ -336,7 +348,10 @@ func fileLocation(mount *diagnostic.Mount, name string) location {
 }
 
 func (s *scanner) origin(system, volume string, mount *diagnostic.Mount) *group {
-	key := groupKey{system, volume}
+	key := groupKey{system: system, volume: volume}
+	if s.active.source != nil {
+		key.source = s.active.source.Path
+	}
 	if s.groups[key] == nil {
 		s.groups[key] = s.newGroup(system, mount.Partition, mount.Device)
 	}
@@ -345,7 +360,7 @@ func (s *scanner) origin(system, volume string, mount *diagnostic.Mount) *group 
 
 func (s *scanner) newGroup(system string, partition, device *string) *group {
 	return &group{paths: make(map[string]bool), result: System{
-		Name: system, Partition: partition, Device: device, Files: []ClassifiedFile{},
+		Name: system, LocalSource: s.active.source, Partition: partition, Device: device, Files: []ClassifiedFile{},
 		Paths: []string{}, EmptyFolders: []string{}, FoldersWithoutGames: []string{}, Games: []Game{}, ROMChecks: []ROMCheck{}, Unassociated: []Related{},
 		UnknownFiles: []string{}, UninspectedPackages: []string{},
 		Counts: map[string]int{"games": 0, "saves": 0, "states": 0, "images": 0, "videos": 0, "metadata": 0, "unknown": 0},

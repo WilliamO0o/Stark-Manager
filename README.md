@@ -31,7 +31,7 @@ devices, game saves and backups.
 
 ## 📌 Development Status
 
-A v0.3.0 amplia o diagnóstico com inventário de ROMs, ports e suporte a arquivos ZIP e 7z.
+A v0.4.1 permite inventariar bibliotecas locais de ROMs por caminho.
 Ela lê informações do sistema, RAM, baterias e dispositivos de bloco
 e apresenta um resumo em português ou um relatório JSON versionado.
 
